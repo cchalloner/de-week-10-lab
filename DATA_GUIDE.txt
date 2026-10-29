@@ -1,0 +1,64 @@
+SecurePayATL: Week 10 teaching data
+
+Provenance: Synthetic transactions supplied by the instructor. No real people or transactions.
+The assignment file contains 50,000 rows, including 253 fraud labels (0.506%).
+The source contains 500,000 rows and 2,534 fraud labels. The extract preserves the approximate
+fraud proportion but deliberately includes every source record with amount <= 0, amount > 10000,
+or a missing/placeholder merchant category. Those problems are overrepresented.
+Other rows were sampled separately by label with pandas random_state=42.
+No source field values were changed. Original row order was retained. All 15 columns remain.
+The demo and lab use separate source records and do not overlap the assignment.
+Because every record with those problems went into the assignment file, the demo and lab files
+contain no invalid required numeric values and no merchant placeholders. Zero rejections is expected there.
+
+Field descriptions (inferred from names and observed values; original data dictionary unavailable):
+transaction_id: unique transaction reference. Keep for tracking, exclude from model features.
+user_id: account reference. Exclude from model features.
+timestamp: transaction date/time. Retain for context, exclude from this week's model.
+amount: transaction amount. Currency is treated as US dollars for this classroom scenario.
+merchant_category: transaction/merchant category text.
+device_fingerprint: device identifier. Missing is allowed. Exclude the identifier from this model.
+ip_city, ip_state, ip_latitude, ip_longitude: location fields inferred from IP.
+  ip_state XX with ip_city International means an international IP address. Coordinates are blank for these rows.
+  A blank ip_state means the location could not be determined. ip_city then shows a blank, UNKNOWN, 0.0.0.0, or VPN.
+account_age_days: account age in days at the transaction, assumed available at prediction time.
+transaction_count_24hr: number of transactions in the prior 24 hours, assumed available at prediction time.
+is_fraud: observed Boolean outcome. True is the positive class. Training/evaluation label only.
+fraud_confirm_method: outcome-related investigation field.
+chargeback_status: outcome-related dispute field. The text None means no chargeback was filed.
+
+CLASSROOM INPUT CONTRACT (instructor-defined assumptions, not financial regulations)
+Prediction time: when a transaction is submitted, before an investigation or chargeback outcome.
+Use exactly these five model features:
+  numeric: amount, account_age_days, transaction_count_24hr
+  categorical: merchant_category, ip_state
+Keep transaction_id beside outputs, never as a feature.
+Required numeric values must be present, finite, and numeric:
+  amount > 0
+  account_age_days >= 0 and a whole number
+  transaction_count_24hr >= 0 and a whole number
+Reject records that violate these numeric rules and record the transaction ID and reason.
+An amount above 10000 remains valid under this contract. It is not automatically fraudulent.
+Missing merchant_category or ip_state is allowed. Represent missing categories as 'Missing'.
+ip_state XX is a known value (international IP), not a placeholder. Keep it as its own category.
+Treat merchant placeholders UNKNOWN, MCC_9999 and UNDEFINED as missing.
+Missing optional fields outside the five features must not cause row rejection.
+Allow a new nonmissing category at prediction time and preserve the fitted feature structure.
+If an entire required feature column is absent, stop with a clear message. Do not invent the column.
+Assume incoming transaction IDs are present and unique for this week's task.
+Never impute is_fraud. All assignment training labels are present in the supplied CSV.
+
+MODEL AND EVALUATION
+Use LogisticRegression(max_iter=2000, class_weight='balanced', random_state=42).
+The class weighting is provided because fraud cases are rare. It changes the training emphasis;
+it does not rebalance the test set or guarantee useful probabilities.
+Use a stratified 80/20 split with random_state=42. Fit preparation only on training rows.
+Use StandardScaler for the three numeric features and a categorical pipeline with
+SimpleImputer(strategy='constant', fill_value='Missing') and OneHotEncoder(handle_unknown='ignore', sparse_output=False).
+Keep drop=None (the default). This week evaluates predictions, not individual coefficients.
+Use a most-frequent DummyClassifier baseline on the same test rows.
+Report accuracy, fraud precision, fraud recall, and a confusion matrix with labels=[False, True].
+Use zero_division=0 where needed and explain what a zero means.
+Do not tune the model, threshold, or feature list using test results. No minimum score earns points.
+This random holdout is a classroom check, not a simulation of future deployment. Users repeat across
+transactions, and a real deployment study would require time-aware evaluation and consideration of repeated users.
