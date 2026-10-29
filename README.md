@@ -1,4 +1,4 @@
-\# Week 10 Lab: Investigating a Tempting Fix
+# Week 10 Lab: Investigating a Tempting Fix
 
 
 
